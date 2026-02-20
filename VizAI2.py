@@ -9,7 +9,7 @@ st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
     .stChatMessage { border-radius: 15px; padding: 12px; margin-bottom: 10px; border: 1px solid #e0e0e0; }
-    h1 { color: #1E3A8A; font-family: 'Inter', sans-serif; text-align: right; }
+    h1 { color: #1E3A8A; font-family: 'Inter', sans-serif; text-align: left; }
     .stButton>button { width: 100%; border-radius: 20px; }
     </style>
     """, unsafe_allow_html=True)
