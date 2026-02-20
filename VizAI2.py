@@ -12,7 +12,7 @@ st.set_page_config(
 # --- App Header ---
 st.markdown(
     """
-    <div style='text-align:center; background-color:#f0f2f6; padding:20px; border-radius:10px'>
+    <div style='text-align:left; background-color:#f0f2f6; padding:20px; border-radius:10px'>
         <h1>💬 Ask VizAI</h1>
         <p style='font-size:16px; color:#555;'>College search, simplified</p>
     </div>
