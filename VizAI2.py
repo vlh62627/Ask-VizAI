@@ -62,7 +62,7 @@ if prompt := st.chat_input("Ask about Texas colleges, tuition, or rankings..."):
     with st.chat_message("assistant"):
         # We use 'gemini-2.0-flash' or 'gemini-1.5-flash' depending on your tier access
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             config=types.GenerateContentConfig(
                 system_instruction=custom_instructions
             ),
