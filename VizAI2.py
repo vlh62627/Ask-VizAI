@@ -38,11 +38,13 @@ personas = {
 }
 selected_lang = st.sidebar.selectbox("Select Language", list(personas.keys()))
 
+# Added 'key' to programmatically reset this widget
 selected_state = st.sidebar.selectbox(
     "Target US State", 
     us_states, 
     index=None, 
-    placeholder="Select a State"
+    placeholder="Select a State",
+    key="state_selector" 
 )
 
 # 4. Final System Instruction Assembly
@@ -73,15 +75,16 @@ if st.session_state.config != f"{selected_lang}-{selected_state}":
 st.title("🎓 Ask VizAI")
 st.markdown("<p style='text-align: left;'><i>School & College search, simplified</i></p>", unsafe_allow_html=True)
 
+# Updated Clear Chat Button: Resets history AND the state selector
 if st.sidebar.button("🗑️ Clear Chat"):
     st.session_state.history = []
+    st.session_state.state_selector = None # This clears the dropdown selection
     st.rerun()
 
 # 7. Gemini Client
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # 8. Trigger Immediate Greeting Logic
-# If state is selected and history is empty, generate the greeting automatically
 if selected_state and len(st.session_state.history) == 0:
     with st.spinner("Initializing VizAI..."):
         response = client.models.generate_content(
