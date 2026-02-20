@@ -29,16 +29,18 @@ us_states = [
 # 3. Sidebar Persona & State Selection
 st.sidebar.title("🎨 Customize VizAI")
 
+# Language Personas - Now with a "Detect Language" instruction
 personas = {
-    "English": "You are VizAI, an expert student counselor. Help users find schools and colleges in ",
-    "Spanish": "Eres VizAI, un consejero estudiantil experto. Ayuda a los usuarios a encontrar escuelas y universidades en ",
-    "Telugu": "మీరు VizAI, విద్యార్థి కౌన్సెలర్. ఇక్కడ పాఠశాలలు మరియు కళాశాలలను కనుగొనడంలో సహాయపడండి: ",
-    "Tamil": "நீங்கள் VizAI, ஒரு மாணவர் ஆலோசகர். பள்ளிகள் மற்றும் கல்லூரிகளைக் கண்டறிய உதவவும்: ",
-    "Hindi": "आप VizAI हैं, एक विशेषज्ञ छात्र परामर्शदाता। यहां स्कूल और कॉलेज खोजने में मदद करें: "
+    "English": "You are VizAI, an expert student counselor. Preferred language: English.",
+    "Spanish": "You are VizAI, an expert student counselor. Preferred language: Spanish.",
+    "Telugu": "You are VizAI, an expert student counselor. Preferred language: Telugu.",
+    "Tamil": "You are VizAI, an expert student counselor. Preferred language: Tamil.",
+    "Hindi": "You are VizAI, an expert student counselor. Preferred language: Hindi."
 }
+
 selected_lang = st.sidebar.selectbox("Select Language", list(personas.keys()))
 
-# Added 'key' to programmatically reset this widget
+# State Selection with Key for Resetting
 selected_state = st.sidebar.selectbox(
     "Target US State", 
     us_states, 
@@ -51,13 +53,15 @@ selected_state = st.sidebar.selectbox(
 state_context = selected_state if selected_state else "[Pending Selection]"
 
 final_instructions = (
-    f"{personas[selected_lang]} {state_context}. "
+    f"{personas[selected_lang]} Target State: {state_context}. "
+    "SYSTEM RULE: Always respond in the SAME language the user uses for their message, "
+    "even if it differs from the persona's 'Preferred language'. "
     "Your personality: You are a student counselor, polite and a little funny too. "
-    "CRITICAL RULE: Immediately when a state is selected, greet the student warmly and enthusiastically in their chosen language. "
-    "Ask what they are looking for. If they mention schools or colleges, ask about their next level of education and specific needs. "
-    "Provide school details in a single line using this structure:\n"
-    "School: \nOffering Classes: \nFee details: \nSubjects and Syllabus: \nSuggestions: \n"
-    "Be precise and provide detailed follow-ups when asked."
+    "BEHAVIOR: Immediately after a state is selected, greet the student warmly and ask what they are looking for. "
+    "If they ask about school or colleges, ask them about their next level of education and specific info needed. "
+    "DATA FORMAT: Provide public/private school details in a single line with this structure:\n"
+    "School: [Name] | Offering Classes: [Grades] | Fee details: [Fees] | Subjects and Syllabus: [Info] | Suggestions: [Advice]\n"
+    "After providing the summary, offer to provide detailed information about a specific school."
 )
 
 # 5. Session State & Logic
@@ -65,7 +69,7 @@ if "history" not in st.session_state or "config" not in st.session_state:
     st.session_state.history = []
     st.session_state.config = f"{selected_lang}-{selected_state}"
 
-# Reset chat if Language or State changes
+# Reset chat if selection changes
 if st.session_state.config != f"{selected_lang}-{selected_state}":
     st.session_state.history = []
     st.session_state.config = f"{selected_lang}-{selected_state}"
@@ -75,26 +79,28 @@ if st.session_state.config != f"{selected_lang}-{selected_state}":
 st.title("🎓 Ask VizAI")
 st.markdown("<p style='text-align: left;'><i>School & College search, simplified</i></p>", unsafe_allow_html=True)
 
-# Updated Clear Chat Button: Resets history AND the state selector
+# Clear Chat logic resets both history and the dropdown
 if st.sidebar.button("🗑️ Clear Chat"):
     st.session_state.history = []
-    st.session_state.state_selector = None # This clears the dropdown selection
+    st.session_state.state_selector = None
     st.rerun()
 
 # 7. Gemini Client
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-# 8. Trigger Immediate Greeting Logic
+# 8. Immediate Greeting Logic
+# Triggers if a state is selected and no messages exist yet
 if selected_state and len(st.session_state.history) == 0:
     with st.spinner("Initializing VizAI..."):
+        # We send a hidden prompt to trigger the warm greeting
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model="gemini-2.0-flash-lite",
             config=types.GenerateContentConfig(system_instruction=final_instructions),
-            contents=["Please greet me warmly since I just selected my state."]
+            contents=[f"I have just selected {selected_state}. Greet me warmly in {selected_lang}!"]
         )
         st.session_state.history.append({"role": "assistant", "content": response.text})
 
-# 9. Display History
+# 9. Display Chat History
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -108,7 +114,7 @@ if selected_state:
 
         with st.chat_message("assistant"):
             response = client.models.generate_content(
-                model="gemini-2.5-flash-lite",
+                model="gemini-2.0-flash-lite",
                 config=types.GenerateContentConfig(system_instruction=final_instructions),
                 contents=[msg["content"] for msg in st.session_state.history]
             )
@@ -116,10 +122,10 @@ if selected_state:
             st.markdown(reply)
             st.session_state.history.append({"role": "assistant", "content": reply})
 else:
-    st.info("👋 Please select a Target US State in the sidebar to start your consultation!")
+    st.info("👋 Please select a Target US State in the sidebar to begin!")
 
 st.sidebar.markdown("---")
 st.sidebar.write(f"📍 **Focus:** {selected_state if selected_state else 'Not Selected'}")
-st.sidebar.write(f"🌐 **Language:** {selected_lang}")
+st.sidebar.write(f"🌐 **Persona:** {selected_lang}")
 st.sidebar.markdown("---")
 st.sidebar.markdown("❤️ Made by Vijay")
