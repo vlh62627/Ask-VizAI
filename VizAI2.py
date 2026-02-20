@@ -2,77 +2,102 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-# 1. Page Config & Custom Styling
-st.set_page_config(page_title="VizAI - College Search", page_icon="🎓", layout="wide")
+# --- Page config ---
+st.set_page_config(
+    page_title="Gemini Chatbot with System Prompt",
+    page_icon="💬",
+    layout="wide"
+)
 
-# Injecting Custom CSS for a modern, clean look
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stChatMessage { border-radius: 15px; padding: 10px; margin-bottom: 10px; border: 1px solid #e0e0e0; }
-    .st-emotion-cache-1c7n2ka { max-width: 800px; margin: auto; } /* Center content */
-    div[data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #ddd; }
-    h1 { color: #1E3A8A; font-family: 'Inter', sans-serif; }
-    </style>
-    """, unsafe_allow_html=True)
+# --- App Header ---
+st.markdown(
+    """
+    <div style='text-align:center; background-color:#f0f2f6; padding:20px; border-radius:10px'>
+        <h1>💬 Ask VizAI</h1>
+        <p style='font-size:16px; color:#555;'>College search, simplified</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-# 2. Sidebar Persona Logic
-st.sidebar.title("🎨 VizAI Customization")
-
-personas = {
-    "English": "You are VizAI, a helpful college counselor. Simplify undergrad search details. Use tables for comparisons.",
-    "Spanish": "Eres VizAI, un consejero universitario experto. Simplifica la búsqueda de universidades en español.",
-    "Telugu": "మీరు VizAI, కళాశాల కౌన్సెలర్. అండర్ గ్రాడ్యుయేట్ కళాశాల వివరాలను తెలుగులో సులభతరం చేయండి.",
-    "Tamil": "நீங்கள் VizAI, ஒரு கல்லூரி ஆலோசகர். இளங்கலை கல்லூரி விவரங்களை தமிழில் எளிமைப்படுத்துங்கள்.",
-    "Hindi": "आप VizAI हैं, एक कॉलेज काउंसलर। स्नातक कॉलेज विवरणों को हिंदी में सरल बनाएं।"
-}
-
-selected_lang = st.sidebar.selectbox("Choose Language Persona", list(personas.keys()))
-custom_instructions = st.sidebar.text_area("Refine Instructions", value=personas[selected_lang], height=100)
-
-# 3. Session State Management
-if "history" not in st.session_state or "current_persona" not in st.session_state:
-    st.session_state.history = []
-    st.session_state.current_persona = selected_lang
-
-# Reset chat if persona changes
-if st.session_state.current_persona != selected_lang:
-    st.session_state.history = []
-    st.session_state.current_persona = selected_lang
-    st.rerun()
-
-# 4. Header
-st.title("🎓 Ask VizAI")
-st.markdown("##### *Undergrad college search, simplified*")
-
-# 5. Initialize Client (Ensure GEMINI_API_KEY is in your .streamlit/secrets.toml)
+# --- Initialize Gemini client ---
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-# 6. Display History
+# --- Sidebar for system prompt and customization ---
+st.sidebar.title("⚙️ Custom Instructions")
+st.sidebar.write("Modify the system prompt or choose a persona for the AI.")
+
+# Persona dropdown
+persona = st.sidebar.selectbox(
+    "Choose AI Persona 🌐",
+    ["English", "Spanish", "Telugu", "Tamil", "Hindi"],
+    index=0,
+    help="Select a persona/language for the AI assistant."
+)
+
+# Map persona to default system prompt
+persona_prompts = {
+    "English": "You are a helpful assistant who communicates in English.",
+    "Spanish": "Eres un asistente útil que comunica en español.",
+    "Telugu": "మీరు సహాయక చాట్ అసిస్టెంట్, తెలుగు లో సమాధానాలు ఇవ్వండి.",
+    "Tamil": "நீங்கள் உதவியாளராக இருக்கின்றீர்கள் மற்றும் தமிழ் மொழியில் பதிலளிக்கின்றீர்கள்.",
+    "Hindi": "आप एक सहायक हैं और हिंदी में उत्तर देते हैं।"
+}
+
+# System prompt text area
+system_prompt = st.sidebar.text_area(
+    "System Prompt",
+    value=persona_prompts[persona],
+    height=150,
+    help="The system prompt sets the behavior and personality of the AI assistant."
+)
+
+st.sidebar.info(
+    "💡 **Tip:** Try prompts like:\n- 'You are a friendly pirate'\n- 'Respond only in haikus'\n- 'You are a coding tutor'"
+)
+
+# Reset chat when system prompt changes
+if "system_prompt" not in st.session_state:
+    st.session_state.system_prompt = system_prompt
+    st.session_state.history = []
+
+if st.session_state.system_prompt != system_prompt:
+    st.session_state.system_prompt = system_prompt
+    st.session_state.history = []
+    st.experimental_rerun()
+
+# --- Display chat history ---
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 7. Chat Interaction
-if prompt := st.chat_input("Ask about Texas colleges, tuition, or rankings..."):
+# --- Chat input ---
+if prompt := st.chat_input("Type your message here..."):
+    # Add user message to history
     st.session_state.history.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Create chat with system prompt
+    chat = client.chats.create(
+        model="gemini-2.5-flash",
+        config=types.GenerateContentConfig(system_instruction=system_prompt)
+    )
+    
+    # Replay previous messages
+    for msg in st.session_state.history[:-1]:
+        if msg["role"] == "user":
+            chat.send_message(msg["content"])
+
+    # Get response from Gemini
     with st.chat_message("assistant"):
-        # We use 'gemini-2.0-flash' or 'gemini-1.5-flash' depending on your tier access
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            config=types.GenerateContentConfig(
-                system_instruction=custom_instructions
-            ),
-            contents=[msg["content"] for msg in st.session_state.history]
-        )
+        response = chat.send_message(prompt)
         reply = response.text
         st.markdown(reply)
-        st.session_state.history.append({"role": "assistant", "content": reply})
 
-# Sidebar Footer
+    # Add assistant message to history
+    st.session_state.history.append({"role": "assistant", "content": reply})
+
+# --- Sidebar Footer ---
 st.sidebar.markdown("---")
-st.sidebar.markdown("🚀 **VizAI v2.0**")
-st.sidebar.info("Tip: Switching languages resets the chat to keep context consistent.")
+st.sidebar.markdown("❤️ Made by Vijay")
