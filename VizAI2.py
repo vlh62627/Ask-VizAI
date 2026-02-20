@@ -94,7 +94,7 @@ if selected_state and len(st.session_state.history) == 0:
     with st.spinner("Initializing VizAI..."):
         # We send a hidden prompt to trigger the warm greeting
         response = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-2.5-pro-exp-03-25",
             config=types.GenerateContentConfig(system_instruction=final_instructions),
             contents=[f"I have just selected {selected_state}. Greet me warmly in {selected_lang}!"]
         )
