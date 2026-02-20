@@ -26,10 +26,17 @@ us_states = [
     "Wisconsin", "Wyoming"
 ]
 
-# 3. Sidebar Persona & State Selection
+# 3. Callback Function to Clear Chat and Reset Selectbox
+def clear_chat_callback():
+    st.session_state.history = []
+    # This is the correct way to reset a widget with a key
+    st.session_state.state_selector = None 
+    # Force a fresh config state
+    st.session_state.config = None
+
+# 4. Sidebar Persona & State Selection
 st.sidebar.title("🎨 Customize VizAI")
 
-# Language Personas - Now with a "Detect Language" instruction
 personas = {
     "English": "You are VizAI, an expert student counselor. Preferred language: English.",
     "Spanish": "You are VizAI, an expert student counselor. Preferred language: Spanish.",
@@ -40,7 +47,7 @@ personas = {
 
 selected_lang = st.sidebar.selectbox("Select Language", list(personas.keys()))
 
-# State Selection with Key for Resetting
+# State Selection with Key
 selected_state = st.sidebar.selectbox(
     "Target US State", 
     us_states, 
@@ -49,7 +56,7 @@ selected_state = st.sidebar.selectbox(
     key="state_selector" 
 )
 
-# 4. Final System Instruction Assembly
+# 5. Final System Instruction Assembly
 state_context = selected_state if selected_state else "[Pending Selection]"
 
 final_instructions = (
@@ -64,35 +71,32 @@ final_instructions = (
     "After providing the summary, offer to provide detailed information about a specific school."
 )
 
-# 5. Session State & Logic
-if "history" not in st.session_state or "config" not in st.session_state:
+# 6. Session State Initialization
+if "history" not in st.session_state:
     st.session_state.history = []
+if "config" not in st.session_state:
     st.session_state.config = f"{selected_lang}-{selected_state}"
 
-# Reset chat if selection changes
-if st.session_state.config != f"{selected_lang}-{selected_state}":
+# Reset chat if selection changes manually (via dropdown)
+current_config = f"{selected_lang}-{selected_state}"
+if st.session_state.config != current_config:
     st.session_state.history = []
-    st.session_state.config = f"{selected_lang}-{selected_state}"
+    st.session_state.config = current_config
     st.rerun()
 
-# 6. UI Header
+# 7. UI Header
 st.title("🎓 Ask VizAI")
 st.markdown("<p style='text-align: left;'><i>School & College search, simplified</i></p>", unsafe_allow_html=True)
 
-# Clear Chat logic resets both history and the dropdown
-if st.sidebar.button("🗑️ Clear Chat"):
-    st.session_state.history = []
-    st.session_state.state_selector = None
-    st.rerun()
+# Clear Chat Button using the Callback
+st.sidebar.button("🗑️ Clear Chat", on_click=clear_chat_callback)
 
-# 7. Gemini Client
+# 8. Gemini Client
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-# 8. Immediate Greeting Logic
-# Triggers if a state is selected and no messages exist yet
+# 9. Immediate Greeting Logic
 if selected_state and len(st.session_state.history) == 0:
     with st.spinner("Initializing VizAI..."):
-        # We send a hidden prompt to trigger the warm greeting
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite-preview-09-2025",
             config=types.GenerateContentConfig(system_instruction=final_instructions),
@@ -100,12 +104,12 @@ if selected_state and len(st.session_state.history) == 0:
         )
         st.session_state.history.append({"role": "assistant", "content": response.text})
 
-# 9. Display Chat History
+# 10. Display Chat History
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 10. Chat Input
+# 11. Chat Input
 if selected_state:
     if prompt := st.chat_input(f"Ask about education in {selected_state}..."):
         st.session_state.history.append({"role": "user", "content": prompt})
