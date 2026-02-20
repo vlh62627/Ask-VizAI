@@ -58,7 +58,7 @@ if st.session_state.config != f"{selected_lang}-{selected_state}":
 
 # 5. UI Header
 st.title("🎓 Ask VizAI")
-st.markdown("<p style='text-align: left;'><i>Undergrad college search, simplified</i></p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: left;'><i>School & College search, simplified</i></p>", unsafe_allow_html=True)
 
 if st.sidebar.button("🗑️ Clear Chat"):
     st.session_state.history = []
