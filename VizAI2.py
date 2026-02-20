@@ -92,4 +92,4 @@ st.sidebar.write(f"📍 **Focus:** {selected_state}")
 st.sidebar.write(f"🌐 **Language:** {selected_lang}")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("❤️ Made by [Build Fast with AI](https://buildfastwithai.com)")
+st.sidebar.markdown("❤️ Made by Vijay")
