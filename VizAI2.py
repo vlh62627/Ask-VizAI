@@ -99,7 +99,7 @@ if selected_state:
 
         with st.chat_message("assistant"):
             response = client.models.generate_content(
-                model="google/gemini-2.5-flash-lite",
+                model="gemini-2.5-flash-lite",
                 config=types.GenerateContentConfig(system_instruction=final_instructions),
                 contents=[msg["content"] for msg in st.session_state.history]
             )
