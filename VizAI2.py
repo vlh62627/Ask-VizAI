@@ -29,7 +29,6 @@ us_states = [
 # 3. Sidebar Persona & State Selection
 st.sidebar.title("🎨 Customize VizAI")
 
-# Language Selection
 personas = {
     "English": "You are VizAI, an expert student counselor. Help users find schools and colleges in ",
     "Spanish": "Eres VizAI, un consejero estudiantil experto. Ayuda a los usuarios a encontrar escuelas y universidades en ",
@@ -39,7 +38,6 @@ personas = {
 }
 selected_lang = st.sidebar.selectbox("Select Language", list(personas.keys()))
 
-# State Selection (Set index=None for a blank/placeholder start)
 selected_state = st.sidebar.selectbox(
     "Target US State", 
     us_states, 
@@ -48,19 +46,16 @@ selected_state = st.sidebar.selectbox(
 )
 
 # 4. Final System Instruction Assembly
-# Only include state context if a state is selected
 state_context = selected_state if selected_state else "[Pending Selection]"
 
 final_instructions = (
     f"{personas[selected_lang]} {state_context}. "
     "Your personality: You are a student counselor, polite and a little funny too. "
-    "CRITICAL RULE: If the student has just selected a state, greet them warmly and enthusiastically. "
-    "Based on the selection of State and Language, greet him and ask what he is looking for. "
-    "If he asks about school or colleges, ask the student about his next level of education and information he is looking for. "
-    "Provide the all the public and private school details in a single line with precise and perfect details. "
-    "Use the following structure:\n"
+    "CRITICAL RULE: Immediately when a state is selected, greet the student warmly and enthusiastically in their chosen language. "
+    "Ask what they are looking for. If they mention schools or colleges, ask about their next level of education and specific needs. "
+    "Provide school details in a single line using this structure:\n"
     "School: \nOffering Classes: \nFee details: \nSubjects and Syllabus: \nSuggestions: \n"
-    "Based on the response provide detailed information about that school/college."
+    "Be precise and provide detailed follow-ups when asked."
 )
 
 # 5. Session State & Logic
@@ -68,7 +63,7 @@ if "history" not in st.session_state or "config" not in st.session_state:
     st.session_state.history = []
     st.session_state.config = f"{selected_lang}-{selected_state}"
 
-# Reset chat if Language or State changes to keep context fresh
+# Reset chat if Language or State changes
 if st.session_state.config != f"{selected_lang}-{selected_state}":
     st.session_state.history = []
     st.session_state.config = f"{selected_lang}-{selected_state}"
@@ -82,15 +77,26 @@ if st.sidebar.button("🗑️ Clear Chat"):
     st.session_state.history = []
     st.rerun()
 
-# 7. Gemini Client (API Key from st.secrets)
+# 7. Gemini Client
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-# 8. Chat Display & Input
+# 8. Trigger Immediate Greeting Logic
+# If state is selected and history is empty, generate the greeting automatically
+if selected_state and len(st.session_state.history) == 0:
+    with st.spinner("Initializing VizAI..."):
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            config=types.GenerateContentConfig(system_instruction=final_instructions),
+            contents=["Please greet me warmly since I just selected my state."]
+        )
+        st.session_state.history.append({"role": "assistant", "content": response.text})
+
+# 9. Display History
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Only show chat input if a state is selected
+# 10. Chat Input
 if selected_state:
     if prompt := st.chat_input(f"Ask about education in {selected_state}..."):
         st.session_state.history.append({"role": "user", "content": prompt})
