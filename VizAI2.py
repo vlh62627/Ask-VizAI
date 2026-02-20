@@ -90,7 +90,7 @@ if prompt := st.chat_input(f"Ask about education in {selected_state}..."):
 
     with st.chat_message("assistant"):
         response = client.models.generate_content(
-            model="gemini-2.5-flash", # Updated to current best model
+            model="gemini-2.5-flash-lite", # Updated to current best model
             config=types.GenerateContentConfig(system_instruction=system_persona),
             contents=[msg["content"] for msg in st.session_state.history]
         )
